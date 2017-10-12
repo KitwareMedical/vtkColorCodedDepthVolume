@@ -13,25 +13,73 @@
 
 =========================================================================*/
 
+// VTK includes
 #include <vtkActor.h>
 #include <vtkCamera.h>
+#include <vtkColorTransferFunction.h>
+#include <vtkDataArray.h>
+#include <vtkImageData.h>
+#include <vtkInteractorStyleTrackballCamera.h>
+#include <vtkMath.h>
 #include <vtkNew.h>
-#include <vtkNrrdReader.h>
+#include <vtkObjectFactory.h>
 #include <vtkOpenGLGPUVolumeRayCastMapper.h>
+#include <vtkPiecewiseFunction.h>
+#include <vtkPointData.h>
 #include <vtkRenderWindow.h>
 #include <vtkRenderWindowInteractor.h>
 #include <vtkRenderer.h>
 #include <vtkVolume.h>
 #include <vtkVolumeProperty.h>
 
+// STL includes
 #include <sys/stat.h>
 #include <sys/types.h>
+
+// AnimateVolume includes
+#include "vtkNrrdSequenceReader.h"
+#include <ColorCodedDepthFragmentShader.h>
+
+class ChangeSequenceStyle : public vtkInteractorStyleTrackballCamera
+{
+public:
+  static ChangeSequenceStyle* New();
+  vtkTypeMacro(ChangeSequenceStyle, vtkInteractorStyleTrackballCamera);
+
+  virtual void OnKeyPress() override
+  {
+    if (r == nullptr)
+    {
+      // Forward the event
+      vtkInteractorStyleTrackballCamera::OnKeyPress();
+      return;
+    }
+    // Get the keypress
+    vtkRenderWindowInteractor* rwi = this->Interactor;
+    std::string key = rwi->GetKeySym();
+    // Handle the next volume key
+    if (key == "n")
+    {
+      this->r->Next();
+    }
+    else if (key == "p")
+    {
+      this->r->Previous();
+    }
+    // Forward the event
+    vtkInteractorStyleTrackballCamera::OnKeyPress();
+  }
+
+  vtkNrrdSequenceReader* r;
+};
+vtkStandardNewMacro(ChangeSequenceStyle);
 
 int main(int argc, char* argv[])
 {
   if (argc < 2)
   {
-    std::cerr << "Usage: " << argv[0] << " Nrrd files directory " << std::endl;
+    std::cerr << "Usage: " << argv[0] << " <Nrrd files directory> "
+              << std::endl;
     return EXIT_FAILURE;
   }
 
@@ -42,12 +90,63 @@ int main(int argc, char* argv[])
     std::cerr << "ERROR: Cannot access \"" << argv[1] << "\"" << std::endl;
     return EXIT_FAILURE;
   }
-  else if (info.st_mode & S_IFDIR)
+  else if ((info.st_mode & S_IFDIR) != S_IFDIR)
   {
     std::cerr << "ERROR: Expecting a directory. \"" << argv[1]
               << "\" is not a directory" << std::endl;
     return EXIT_FAILURE;
   }
+
+  vtkNew<vtkNrrdSequenceReader> reader;
+  reader->SetDirectoryName(argv[1]);
+  reader->Update();
+
+  vtkImageData* im = reader->GetOutput();
+  double* bounds = im->GetBounds();
+  double depthRange[2] = { 0.0, 0.0 };
+  depthRange[1] = vtkMath::Max(bounds[1], bounds[3]);
+  depthRange[1] = vtkMath::Max(depthRange[1], bounds[5]);
+  std::cout << "Depth Range: " << depthRange[0] << " " << depthRange[1]
+            << std::endl;
+
+  vtkNew<vtkVolumeProperty> volumeProperty;
+  volumeProperty->ShadeOn();
+  volumeProperty->SetInterpolationType(VTK_LINEAR_INTERPOLATION);
+
+  vtkDataArray* arr = reader->GetOutput()->GetPointData()->GetScalars();
+  double range[2];
+  arr->GetRange(range);
+  std::cout << "Scalar Range: " << range[0] << " " << range[1] << std::endl;
+
+  // Prepare 1D Transfer Functions
+  vtkNew<vtkColorTransferFunction> ctf;
+  ctf->AddRGBPoint(depthRange[0], 1.0, 0.0, 0.0);
+  ctf->AddRGBPoint(0.5 * (depthRange[0] + depthRange[1]), 0.5, 0.5, 0.5);
+  ctf->AddRGBPoint(0.8 * (depthRange[0] + depthRange[1]), 0.5, 0.4, 0.6);
+  ctf->AddRGBPoint(depthRange[1], 0.0, 1.0, 1.0);
+
+  vtkNew<vtkPiecewiseFunction> pf;
+  pf->AddPoint(0, 0.00);
+  pf->AddPoint(127, 0.00);
+  pf->AddPoint(128, 0.01);
+  pf->AddPoint(range[1], 0.5);
+
+  volumeProperty->SetScalarOpacity(pf.GetPointer());
+  volumeProperty->SetColor(ctf.GetPointer());
+
+  vtkNew<vtkOpenGLGPUVolumeRayCastMapper> mapper;
+  mapper->SetInputConnection(reader->GetOutputPort());
+  mapper->SetUseJittering(0);
+  // Tell the mapper to use the min and max of the color function nodes as the
+  // lookup table range instead of the volume scalar range.
+  mapper->SetColorRangeType(vtkGPUVolumeRayCastMapper::NATIVE);
+
+  // Modify the shader to color based on the depth of the translucent voxel
+  mapper->SetFragmentShaderCode(ColorCodedDepthFragmentShader);
+
+  vtkNew<vtkVolume> volume;
+  volume->SetMapper(mapper.GetPointer());
+  volume->SetProperty(volumeProperty.GetPointer());
 
   vtkNew<vtkRenderWindow> renWin;
   renWin->SetMultiSamples(0);
@@ -55,9 +154,15 @@ int main(int argc, char* argv[])
 
   vtkNew<vtkRenderer> ren;
   renWin->AddRenderer(ren.GetPointer());
+  ren->AddVolume(volume.GetPointer());
+  ren->ResetCamera();
 
   vtkNew<vtkRenderWindowInteractor> iren;
   iren->SetRenderWindow(renWin.GetPointer());
+
+  vtkNew<ChangeSequenceStyle> style;
+  style->r = reader.GetPointer();
+  iren->SetInteractorStyle(style.GetPointer());
 
   renWin->Render();
   iren->Start();
