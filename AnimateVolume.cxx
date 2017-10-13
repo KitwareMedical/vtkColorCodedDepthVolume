@@ -56,11 +56,26 @@ public:
     // Handle the next volume key
     if (key == "n")
     {
-      this->Reader->Next();
+      if (this->Reader->GetCurrentIndex() >=
+          this->Reader->GetNumberOfNrrdFiles() - 1)
+      {
+        this->Reader->SetCurrentIndex(0);
+      }
+      else
+      {
+        this->Reader->Next();
+      }
     }
     else if (key == "p")
     {
-      this->Reader->Previous();
+      if (this->Reader->GetCurrentIndex() <= 0)
+      {
+        this->Reader->SetCurrentIndex(this->Reader->GetNumberOfNrrdFiles() - 1);
+      }
+      else
+      {
+        this->Reader->Previous();
+      }
     }
     else if (key == "space")
     {
@@ -178,6 +193,8 @@ int main(int argc, char* argv[])
   vtkNew<ChangeSequenceStyle> style;
   style->Reader = reader.GetPointer();
   iren->SetInteractorStyle(style.GetPointer());
+  iren->SetKeySym("n");
+  iren->InvokeEvent(vtkCommand::KeyPressEvent, nullptr);
 
   renWin->Render();
   iren->Start();

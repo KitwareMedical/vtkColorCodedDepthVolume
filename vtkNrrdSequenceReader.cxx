@@ -161,9 +161,11 @@ int vtkNrrdSequenceReader::RequestData(vtkInformation* request,
 std::string vtkNrrdSequenceReader::GetCurrentFileName()
 {
   std::set<std::string>::const_iterator it = this->NrrdFileNames.begin();
-  int idx = this->CurrentIndex < 0 ? 0 : this->CurrentIndex;
-  idx = idx >= this->NumberOfNrrdFiles ? this->NumberOfNrrdFiles - 1 : idx;
-  std::advance(it, idx);
+  this->CurrentIndex = this->CurrentIndex < 0 ? 0 : this->CurrentIndex;
+  this->CurrentIndex = this->CurrentIndex >= this->NumberOfNrrdFiles
+    ? this->NumberOfNrrdFiles - 1
+    : this->CurrentIndex;
+  std::advance(it, this->CurrentIndex);
   return *it;
 }
 
