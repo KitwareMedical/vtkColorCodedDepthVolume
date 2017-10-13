@@ -151,7 +151,7 @@ int main(int argc, char* argv[])
 
   vtkNew<vtkOpenGLGPUVolumeRayCastMapper> mapper;
   mapper->SetInputConnection(reader->GetOutputPort());
-  mapper->SetUseJittering(0);
+  mapper->SetUseJittering(1);
   // Tell the mapper to use the min and max of the color function nodes as the
   // lookup table range instead of the volume scalar range.
   mapper->SetColorRangeType(vtkGPUVolumeRayCastMapper::NATIVE);
