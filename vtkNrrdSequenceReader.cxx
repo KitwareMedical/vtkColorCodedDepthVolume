@@ -79,8 +79,7 @@ int vtkNrrdSequenceReader::RequestInformation(
     else
     {
       vtkDebugMacro(<< fileString.c_str()
-                    << " - vtkNrrdReader CanReadFile returned : "
-                    << val);
+                    << " - vtkNrrdReader CanReadFile returned : " << val);
     }
   }
   this->NumberOfNrrdFiles = this->NrrdFileNames.size();

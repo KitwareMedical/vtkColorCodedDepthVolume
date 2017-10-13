@@ -15,6 +15,8 @@
 
 // VTK includes
 #include <vtkActor.h>
+#include <vtkAnimationCue.h>
+#include <vtkAnimationScene.h>
 #include <vtkCamera.h>
 #include <vtkColorTransferFunction.h>
 #include <vtkDataArray.h>
@@ -37,6 +39,8 @@
 #include <sys/types.h>
 
 // AnimateVolume includes
+#include "AnimationCueObserver.h"
+#include "VolumeAnimator.h"
 #include "vtkNrrdSequenceReader.h"
 #include <ColorCodedDepthFragmentShader.h>
 
@@ -48,29 +52,44 @@ public:
 
   virtual void OnKeyPress() override
   {
-    if (r == nullptr)
-    {
-      // Forward the event
-      vtkInteractorStyleTrackballCamera::OnKeyPress();
-      return;
-    }
     // Get the keypress
     vtkRenderWindowInteractor* rwi = this->Interactor;
     std::string key = rwi->GetKeySym();
     // Handle the next volume key
     if (key == "n")
     {
-      this->r->Next();
+      double t = this->Scene->GetAnimationTime();
+      std::cout << t << std::endl;
+      t += 5;
+      this->Scene->SetAnimationTime(this->Scene->GetAnimationTime() + 1.0);
     }
     else if (key == "p")
     {
-      this->r->Previous();
+      if (!this->Scene->IsInPlay())
+      {
+        double t = this->Scene->GetAnimationTime();
+        t -= 1 / this->FrameRate;
+        this->Scene->SetAnimationTime(t);
+      }
+    }
+    else if (key == "space")
+    {
+      this->Scene->Play();
+      // this->r->SetCurrentIndex(0);
+      // rwi->GetRenderWindow()->Render();
+      // for (int i = 0; i < r->GetNumberOfNrrdFiles() - 1; ++i)
+      // {
+      //   this->r->Next();
+      //   rwi->GetRenderWindow()->Render();
+      // }
     }
     // Forward the event
     vtkInteractorStyleTrackballCamera::OnKeyPress();
+    rwi->GetRenderWindow()->Render();
   }
 
-  vtkNrrdSequenceReader* r;
+  vtkAnimationScene* Scene;
+  double FrameRate;
 };
 vtkStandardNewMacro(ChangeSequenceStyle);
 
@@ -161,8 +180,30 @@ int main(int argc, char* argv[])
   iren->SetRenderWindow(renWin.GetPointer());
 
   vtkNew<ChangeSequenceStyle> style;
-  style->r = reader.GetPointer();
   iren->SetInteractorStyle(style.GetPointer());
+
+  double frameRate = 1;
+  double start = 0;
+  double end = (reader->GetNumberOfNrrdFiles() - 1) / frameRate;
+
+  vtkNew<vtkAnimationScene> scene;
+  // scene->SetModeToSequence();
+  scene->SetLoop(0);
+  scene->SetStartTime(start);
+  scene->SetEndTime(end);
+  scene->SetFrameRate(frameRate);
+  style->Scene = scene.GetPointer();
+  style->FrameRate = frameRate;
+
+  vtkNew<vtkAnimationCue> cue;
+  scene->AddCue(cue.GetPointer());
+  cue->SetStartTime(start);
+  cue->SetEndTime(end);
+
+  VolumeAnimator animator;
+  animator.SetReader(reader.GetPointer());
+  animator.SetRenderWindow(renWin.GetPointer());
+  animator.AddObserversToCue(cue.GetPointer());
 
   renWin->Render();
   iren->Start();

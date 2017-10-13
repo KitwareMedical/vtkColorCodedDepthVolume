@@ -33,6 +33,10 @@ add_executable(${PROJECT_NAME} MACOSX_BUNDLE
   ${PROJECT_NAME}.cxx
   vtkNrrdSequenceReader.cxx
   vtkNrrdSequenceReader.h
+  VolumeAnimator.cxx
+  VolumeAnimator.h
+  AnimationCueObserver.cxx
+  AnimationCueObserver.h
   ${shader_c_files}
   )
 
