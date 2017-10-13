@@ -19,6 +19,7 @@
 #include <vtkAnimationScene.h>
 #include <vtkCamera.h>
 #include <vtkColorTransferFunction.h>
+#include <vtkCornerAnnotation.h>
 #include <vtkDataArray.h>
 #include <vtkImageData.h>
 #include <vtkInteractorStyleTrackballCamera.h>
@@ -47,6 +48,12 @@ class ChangeSequenceStyle : public vtkInteractorStyleTrackballCamera
 public:
   static ChangeSequenceStyle* New();
   vtkTypeMacro(ChangeSequenceStyle, vtkInteractorStyleTrackballCamera);
+
+  virtual void Update()
+    {
+    this->CA->SetText(2, this->Reader->GetCurrentFileName().c_str());
+    this->Interactor->GetRenderWindow()->Render();
+    }
 
   virtual void OnKeyPress() override
   {
@@ -80,19 +87,20 @@ public:
     else if (key == "space")
     {
       this->Reader->SetCurrentIndex(0);
-      rwi->GetRenderWindow()->Render();
+      this->Update();
       for (int i = 0; i < this->Reader->GetNumberOfNrrdFiles() - 1; ++i)
       {
         this->Reader->Next();
-        rwi->GetRenderWindow()->Render();
+        this->Update();
       }
     }
+    this->Update();
     // Forward the event
     vtkInteractorStyleTrackballCamera::OnKeyPress();
-    rwi->GetRenderWindow()->Render();
   }
 
   vtkNrrdSequenceReader* Reader;
+  vtkCornerAnnotation* CA;
 };
 vtkStandardNewMacro(ChangeSequenceStyle);
 
@@ -187,11 +195,16 @@ int main(int argc, char* argv[])
   ren->AddVolume(volume.GetPointer());
   ren->ResetCamera();
 
+  vtkNew<vtkCornerAnnotation> ca;
+  ca->SetText(2, reader->GetCurrentFileName().c_str());
+  ren->AddViewProp(ca.GetPointer());
+
   vtkNew<vtkRenderWindowInteractor> iren;
   iren->SetRenderWindow(renWin.GetPointer());
 
   vtkNew<ChangeSequenceStyle> style;
   style->Reader = reader.GetPointer();
+  style->CA = ca.GetPointer();
   iren->SetInteractorStyle(style.GetPointer());
   iren->SetKeySym("n");
   iren->InvokeEvent(vtkCommand::KeyPressEvent, nullptr);
