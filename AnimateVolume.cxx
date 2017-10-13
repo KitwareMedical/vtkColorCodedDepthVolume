@@ -144,11 +144,9 @@ int main(int argc, char* argv[])
   vtkImageData* im = reader->GetOutput();
   double* bounds = im->GetBounds();
   double depthRange[2] = { 0.0, 0.0 };
-  depthRange[1] = vtkMath::Max(bounds[1], bounds[3]);
-  depthRange[1] = vtkMath::Max(depthRange[1], bounds[5]);
+  depthRange[1] = bounds[5];
 
   vtkNew<vtkVolumeProperty> volumeProperty;
-  volumeProperty->ShadeOn();
   volumeProperty->SetInterpolationType(VTK_LINEAR_INTERPOLATION);
 
   vtkDataArray* arr = im->GetPointData()->GetScalars();
@@ -157,17 +155,19 @@ int main(int argc, char* argv[])
 
   // Prepare 1D Transfer Functions
   vtkNew<vtkColorTransferFunction> ctf;
-  ctf->AddRGBPoint(depthRange[0], 1.0, 0.0, 0.0);
-  ctf->AddRGBPoint(0.5 * (depthRange[0] + depthRange[1]), 0.5, 0.5, 0.5);
-  ctf->AddRGBPoint(0.8 * (depthRange[0] + depthRange[1]), 0.5, 0.4, 0.6);
-  ctf->AddRGBPoint(depthRange[1], 0.0, 1.0, 1.0);
+  ctf->AddRGBPoint(0.0, 0.88, 0.34, 0.34);
+  ctf->AddRGBPoint(depthRange[1] / 7.0, 0.42, 0.0, 0.0);
+  ctf->AddRGBPoint(2 * depthRange[1] / 7.0, 1.0, 0.38, 0.0);
+  ctf->AddRGBPoint(3 * depthRange[1] / 7.0, 1.0, 1.0, 0.0);
+  ctf->AddRGBPoint(4 * depthRange[1] / 7.0, 0.0, 0.5, 0.0);
+  ctf->AddRGBPoint(5 * depthRange[1] / 7.0, 0.0, 1.0, 1.0);
+  ctf->AddRGBPoint(6 * depthRange[1] / 7.0, 0.0, 0.0, 0.34);
+  ctf->AddRGBPoint(depthRange[1], 0.27, 0.27, 0.85);
 
   vtkNew<vtkPiecewiseFunction> pf;
   pf->AddPoint(0, 0.00);
-  pf->AddPoint(50, 0.00);
-  pf->AddPoint(165, 0.5);
-  //pf->AddPoint(101, 0.01);
-  pf->AddPoint(range[1], 0.8);
+  pf->AddPoint(50, 0.05);
+  pf->AddPoint(range[1], 0.5);
 
   volumeProperty->SetScalarOpacity(pf.GetPointer());
   volumeProperty->SetColor(ctf.GetPointer());
