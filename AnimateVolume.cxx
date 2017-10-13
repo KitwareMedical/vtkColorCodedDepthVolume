@@ -108,6 +108,14 @@ int main(int argc, char* argv[])
   reader->SetDirectoryName(argv[1]);
   reader->Update();
 
+  // Cache all the volumes. Starting at 1, since the first one is already cached
+  // by the previous Update call.
+  for (int i = 1; i < reader->GetNumberOfNrrdFiles(); ++i)
+  {
+    reader->Next();
+    reader->Update();
+  }
+
   vtkImageData* im = reader->GetOutput();
   double* bounds = im->GetBounds();
   double depthRange[2] = { 0.0, 0.0 };
