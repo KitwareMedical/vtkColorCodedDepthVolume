@@ -134,9 +134,10 @@ int main(int argc, char* argv[])
 
   vtkNew<vtkPiecewiseFunction> pf;
   pf->AddPoint(0, 0.00);
-  pf->AddPoint(127, 0.00);
-  pf->AddPoint(128, 0.01);
-  pf->AddPoint(range[1], 0.5);
+  pf->AddPoint(50, 0.00);
+  pf->AddPoint(165, 0.5);
+  //pf->AddPoint(101, 0.01);
+  pf->AddPoint(range[1], 0.8);
 
   volumeProperty->SetScalarOpacity(pf.GetPointer());
   volumeProperty->SetColor(ctf.GetPointer());
