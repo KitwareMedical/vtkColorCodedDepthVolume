@@ -79,7 +79,8 @@ int vtkNrrdSequenceReader::RequestInformation(
     else
     {
       vtkDebugMacro(<< fileString.c_str()
-                    << " - vtkNrrdReader CanReadFile returned : " << val);
+                    << " - vtkNrrdReader CanReadFile returned : "
+                    << val);
     }
   }
   this->NumberOfNrrdFiles = this->NrrdFileNames.size();
@@ -92,9 +93,17 @@ int vtkNrrdSequenceReader::RequestInformation(
   idx = idx > this->NumberOfNrrdFiles ? this->NumberOfNrrdFiles - 1 : idx;
   std::advance(it, idx);
   currentFileString += *it;
-  this->SetFileName(currentFileString.c_str());
-  return this->Superclass::RequestInformation(
-    request, inputVector, outputVector);
+  // Find if we have cached copy of the data already
+  std::map<std::string, vtkImageData*>::const_iterator mit =
+    this->NrrdVolumes.find(*it);
+  if (mit == this->NrrdVolumes.end())
+  {
+    // If we have a cached copy, no need to invoke superclass methods
+    this->SetFileName(currentFileString.c_str());
+    return this->Superclass::RequestInformation(
+      request, inputVector, outputVector);
+  }
+  return 1;
 }
 
 //----------------------------------------------------------------------------
