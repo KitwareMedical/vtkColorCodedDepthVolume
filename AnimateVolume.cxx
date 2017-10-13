@@ -37,6 +37,7 @@
 // STL includes
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <vector>
 
 // AnimateVolume includes
 #include "vtkNrrdSequenceReader.h"
@@ -48,6 +49,32 @@ public:
   static ChangeSequenceStyle* New();
   vtkTypeMacro(ChangeSequenceStyle, vtkInteractorStyleTrackballCamera);
 
+  virtual void Next()
+  {
+    if (this->CurrentIndex == this->Mappers->size() - 1)
+    {
+      this->CurrentIndex = 0;
+    }
+    else
+    {
+      this->CurrentIndex++;
+    }
+    this->Volume->SetMapper(this->Mappers->at(this->CurrentIndex));
+  }
+
+  virtual void Previous()
+  {
+    if (this->CurrentIndex == 0)
+    {
+      this->CurrentIndex = this->Mappers->size() - 1;
+    }
+    else
+    {
+      this->CurrentIndex--;
+    }
+    this->Volume->SetMapper(this->Mappers->at(this->CurrentIndex));
+  }
+
   virtual void OnKeyPress() override
   {
     // Get the keypress
@@ -56,19 +83,18 @@ public:
     // Handle the next volume key
     if (key == "n")
     {
-      this->Reader->Next();
+      this->Next();
     }
     else if (key == "p")
     {
-      this->Reader->Previous();
+      this->Previous();
     }
     else if (key == "space")
     {
-      this->Reader->SetCurrentIndex(0);
-      rwi->GetRenderWindow()->Render();
-      for (int i = 0; i < this->Reader->GetNumberOfNrrdFiles() - 1; ++i)
+      this->CurrentIndex = this->Mappers->size() - 1;
+      for (int i = 0; i < this->Mappers->size(); ++i)
       {
-        this->Reader->Next();
+        this->Next();
         rwi->GetRenderWindow()->Render();
       }
     }
@@ -77,7 +103,9 @@ public:
     rwi->GetRenderWindow()->Render();
   }
 
-  vtkNrrdSequenceReader* Reader;
+  int CurrentIndex = 0;
+  vtkVolume* Volume;
+  std::vector<vtkOpenGLGPUVolumeRayCastMapper*>* Mappers;
 };
 vtkStandardNewMacro(ChangeSequenceStyle);
 
@@ -106,7 +134,28 @@ int main(int argc, char* argv[])
 
   vtkNew<vtkNrrdSequenceReader> reader;
   reader->SetDirectoryName(argv[1]);
-  reader->Update();
+  reader->UpdateInformation();
+
+  std::vector<vtkOpenGLGPUVolumeRayCastMapper*> mappers;
+  for (int i = 0; i < reader->GetNumberOfNrrdFiles(); ++i)
+  {
+    vtkNew<vtkOpenGLGPUVolumeRayCastMapper> mapper;
+    mapper->Register(0);
+    mappers.push_back(mapper.GetPointer());
+    reader->SetCurrentIndex(i);
+    reader->Update();
+    vtkImageData* data = vtkImageData::New();
+    data->DeepCopy(reader->GetOutput());
+    mapper->SetInputData(data);
+    data->Delete();
+    mapper->SetUseJittering(0);
+    // Tell the mapper to use the min and max of the color function nodes as the
+    // lookup table range instead of the volume scalar range.
+    mapper->SetColorRangeType(vtkGPUVolumeRayCastMapper::NATIVE);
+
+    // Modify the shader to color based on the depth of the translucent voxel
+    mapper->SetFragmentShaderCode(ColorCodedDepthFragmentShader);
+  }
 
   vtkImageData* im = reader->GetOutput();
   double* bounds = im->GetBounds();
@@ -120,7 +169,7 @@ int main(int argc, char* argv[])
   volumeProperty->ShadeOn();
   volumeProperty->SetInterpolationType(VTK_LINEAR_INTERPOLATION);
 
-  vtkDataArray* arr = reader->GetOutput()->GetPointData()->GetScalars();
+  vtkDataArray* arr = im->GetPointData()->GetScalars();
   double range[2];
   arr->GetRange(range);
   std::cout << "Scalar Range: " << range[0] << " " << range[1] << std::endl;
@@ -141,18 +190,10 @@ int main(int argc, char* argv[])
   volumeProperty->SetScalarOpacity(pf.GetPointer());
   volumeProperty->SetColor(ctf.GetPointer());
 
-  vtkNew<vtkOpenGLGPUVolumeRayCastMapper> mapper;
-  mapper->SetInputConnection(reader->GetOutputPort());
-  mapper->SetUseJittering(0);
-  // Tell the mapper to use the min and max of the color function nodes as the
-  // lookup table range instead of the volume scalar range.
-  mapper->SetColorRangeType(vtkGPUVolumeRayCastMapper::NATIVE);
-
-  // Modify the shader to color based on the depth of the translucent voxel
-  mapper->SetFragmentShaderCode(ColorCodedDepthFragmentShader);
+  vtkOpenGLGPUVolumeRayCastMapper* mapper = mappers.at(0);
 
   vtkNew<vtkVolume> volume;
-  volume->SetMapper(mapper.GetPointer());
+  volume->SetMapper(mapper);
   volume->SetProperty(volumeProperty.GetPointer());
 
   vtkNew<vtkRenderWindow> renWin;
@@ -168,11 +209,18 @@ int main(int argc, char* argv[])
   iren->SetRenderWindow(renWin.GetPointer());
 
   vtkNew<ChangeSequenceStyle> style;
-  style->Reader = reader.GetPointer();
+  style->Mappers = &mappers;
+  style->Volume = volume.GetPointer();
   iren->SetInteractorStyle(style.GetPointer());
 
   renWin->Render();
   iren->Start();
+
+  std::vector<vtkOpenGLGPUVolumeRayCastMapper*>::iterator it;
+  for (it = mappers.begin(); it != mappers.end(); ++it)
+  {
+    (*it)->UnRegister(0);
+  }
 
   return EXIT_SUCCESS;
 }
