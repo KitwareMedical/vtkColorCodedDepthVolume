@@ -3,7 +3,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:   ColorCodedDepthFragmentShader.glsl   
+  Module:    ColorCodedDepthFragmentShader.glsl
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -372,7 +372,7 @@ vec4 castRay(const float zStart, const float zEnd)
     if (!g_skip && g_srcColor.a > 0.0 && l_updateDepth)
     {
       l_opaqueFragPos = g_dataPos;
-      l_updateDepth = false;
+      //l_updateDepth = false;
     }
 
     //VTK::PreComputeGradients::Impl
@@ -385,6 +385,9 @@ vec4 castRay(const float zStart, const float zEnd)
       g_scalar = scalar;
       g_srcColor = vec4(0.0);
       g_srcColor.a = computeOpacity(scalar);
+      vec4 c = texture2D(in_colorTransferFunc, vec2(l_opaqueFragPos.z, 0.0)).xyzw;
+      g_srcColor.xyz = c.xyz * g_srcColor.a;
+      g_fragColor = (1.0f - g_srcColor.a) * g_srcColor + g_fragColor;
     }
 
     //VTK::RenderToImage::Impl
@@ -430,8 +433,8 @@ void finalizeRayCast()
   }
   else
   {
-    gl_FragData[0] =
-      texture2D(in_colorTransferFunc, vec2(l_opaqueFragPos.z, 0.0)).xyzw;
+    gl_FragData[0] = g_fragColor;
+      //texture2D(in_colorTransferFunc, vec2(l_opaqueFragPos.z, 0.0)).xyzw;
   }
 
   //VTK::DepthPass::Exit
