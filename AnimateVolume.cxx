@@ -112,26 +112,25 @@ int main(int argc, char* argv[])
   // by the previous Update call.
   for (int i = 1; i < reader->GetNumberOfNrrdFiles(); ++i)
   {
+    std::cout << "Reading " << reader->GetCurrentFileName() << std::endl;
     reader->Next();
     reader->Update();
   }
+  std::cout << "Reading " << reader->GetCurrentFileName() << std::endl;
 
   vtkImageData* im = reader->GetOutput();
   double* bounds = im->GetBounds();
   double depthRange[2] = { 0.0, 0.0 };
   depthRange[1] = vtkMath::Max(bounds[1], bounds[3]);
   depthRange[1] = vtkMath::Max(depthRange[1], bounds[5]);
-  std::cout << "Depth Range: " << depthRange[0] << " " << depthRange[1]
-            << std::endl;
 
   vtkNew<vtkVolumeProperty> volumeProperty;
   volumeProperty->ShadeOn();
   volumeProperty->SetInterpolationType(VTK_LINEAR_INTERPOLATION);
 
-  vtkDataArray* arr = reader->GetOutput()->GetPointData()->GetScalars();
+  vtkDataArray* arr = im->GetPointData()->GetScalars();
   double range[2];
   arr->GetRange(range);
-  std::cout << "Scalar Range: " << range[0] << " " << range[1] << std::endl;
 
   // Prepare 1D Transfer Functions
   vtkNew<vtkColorTransferFunction> ctf;

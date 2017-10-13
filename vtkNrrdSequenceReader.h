@@ -54,6 +54,7 @@ public:
   {
     this->SetCurrentIndex(this->CurrentIndex - 1);
   }
+  virtual std::string GetCurrentFileName();
   //@}
 
 protected:

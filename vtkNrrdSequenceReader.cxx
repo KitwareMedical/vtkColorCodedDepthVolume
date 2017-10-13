@@ -86,16 +86,13 @@ int vtkNrrdSequenceReader::RequestInformation(
   this->NumberOfNrrdFiles = this->NrrdFileNames.size();
   dir->Delete();
 
+  std::string fstring(this->GetCurrentFileName());
   std::string currentFileString = this->DirectoryName;
   currentFileString += "/";
-  std::set<std::string>::const_iterator it = this->NrrdFileNames.begin();
-  int idx = this->CurrentIndex < 0 ? 0 : this->CurrentIndex;
-  idx = idx > this->NumberOfNrrdFiles ? this->NumberOfNrrdFiles - 1 : idx;
-  std::advance(it, idx);
-  currentFileString += *it;
+  currentFileString += fstring;
   // Find if we have cached copy of the data already
   std::map<std::string, vtkImageData*>::const_iterator mit =
-    this->NrrdVolumes.find(*it);
+    this->NrrdVolumes.find(fstring);
   if (mit == this->NrrdVolumes.end())
   {
     // If we have a cached copy, no need to invoke superclass methods
@@ -129,12 +126,7 @@ int vtkNrrdSequenceReader::RequestData(vtkInformation* request,
   vtkImageData* output =
     vtkImageData::SafeDownCast(outInfo->Get(vtkDataObject::DATA_OBJECT()));
 
-  std::set<std::string>::const_iterator it = this->NrrdFileNames.begin();
-  int idx = this->CurrentIndex < 0 ? 0 : this->CurrentIndex;
-  idx = idx > this->NumberOfNrrdFiles ? this->NumberOfNrrdFiles - 1 : idx;
-  std::advance(it, idx);
-  std::string fileString = *it;
-  std::cout << "Reading " << fileString << std::endl;
+  std::string fileString(this->GetCurrentFileName());
 
   int result = 0;
 
@@ -143,12 +135,14 @@ int vtkNrrdSequenceReader::RequestData(vtkInformation* request,
     this->NrrdVolumes.find(fileString);
   if (mit != this->NrrdVolumes.end())
   {
+    vtkDebugMacro(<<"Loading cached copy of " << fileString);
     // Use the cached copy
     output->ShallowCopy(mit->second);
     result = 1;
   }
   else
   {
+    vtkDebugMacro( << "Reading " << fileString);
     result = this->Superclass::RequestData(request, inputVector, outputVector);
 
     // Once the superclass is done creating the data, cache it for future.
@@ -161,6 +155,16 @@ int vtkNrrdSequenceReader::RequestData(vtkInformation* request,
   }
 
   return result;
+}
+
+//----------------------------------------------------------------------------
+std::string vtkNrrdSequenceReader::GetCurrentFileName()
+{
+  std::set<std::string>::const_iterator it = this->NrrdFileNames.begin();
+  int idx = this->CurrentIndex < 0 ? 0 : this->CurrentIndex;
+  idx = idx > this->NumberOfNrrdFiles ? this->NumberOfNrrdFiles - 1 : idx;
+  std::advance(it, idx);
+  return *it;
 }
 
 //----------------------------------------------------------------------------
