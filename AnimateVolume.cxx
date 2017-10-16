@@ -200,7 +200,7 @@ int main(int argc, char* argv[])
 
   vtkNew<vtkRenderWindow> renWin;
   renWin->SetMultiSamples(0);
-  renWin->SetSize(301, 300); // Intentional NPOT size
+  renWin->SetSize(801, 800); // Intentional NPOT size
 
   vtkNew<vtkRenderer> ren;
   renWin->AddRenderer(ren.GetPointer());
