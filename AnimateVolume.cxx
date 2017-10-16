@@ -36,6 +36,7 @@
 #include <vtkVolumeProperty.h>
 
 // STL includes
+#include <sstream>
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -50,10 +51,18 @@ public:
   vtkTypeMacro(ChangeSequenceStyle, vtkInteractorStyleTrackballCamera);
 
   virtual void Update()
-    {
+  {
     this->CA->SetText(2, this->Reader->GetCurrentFileName().c_str());
+    double t = this->Renderer->GetLastRenderTimeInSeconds();
+    std::ostringstream ss;
+    ss << "FPS: " << 1 / t;
+    this->CA->SetText(1, ss.str().c_str());
+    int* s = this->Renderer->GetSize();
+    std::ostringstream ss1;
+    ss1 << s[0] << " x " << s[1];
+    this->CA->SetText(0, ss1.str().c_str());
     this->Interactor->GetRenderWindow()->Render();
-    }
+  }
 
   virtual void OnKeyPress() override
   {
@@ -99,6 +108,7 @@ public:
     vtkInteractorStyleTrackballCamera::OnKeyPress();
   }
 
+  vtkRenderer* Renderer;
   vtkNrrdSequenceReader* Reader;
   vtkCornerAnnotation* CA;
 };
@@ -205,6 +215,7 @@ int main(int argc, char* argv[])
   iren->SetRenderWindow(renWin.GetPointer());
 
   vtkNew<ChangeSequenceStyle> style;
+  style->Renderer = ren.GetPointer();
   style->Reader = reader.GetPointer();
   style->CA = ca.GetPointer();
   iren->SetInteractorStyle(style.GetPointer());
