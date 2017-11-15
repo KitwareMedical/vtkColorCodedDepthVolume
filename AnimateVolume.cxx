@@ -19,6 +19,7 @@
 #include <vtkAnimationScene.h>
 #include <vtkCamera.h>
 #include <vtkColorTransferFunction.h>
+#include <vtkContourValues.h>
 #include <vtkCornerAnnotation.h>
 #include <vtkDataArray.h>
 #include <vtkImageData.h>
@@ -29,9 +30,11 @@
 #include <vtkOpenGLGPUVolumeRayCastMapper.h>
 #include <vtkPiecewiseFunction.h>
 #include <vtkPointData.h>
+#include <vtkRTAnalyticSource.h>
 #include <vtkRenderWindow.h>
 #include <vtkRenderWindowInteractor.h>
 #include <vtkRenderer.h>
+#include <vtkTimerLog.h>
 #include <vtkVolume.h>
 #include <vtkVolumeProperty.h>
 
@@ -66,14 +69,17 @@ public:
     double t = this->Renderer->GetLastRenderTimeInSeconds();
     std::ostringstream ss;
     ss << "FPS: " << 1 / t;
-    this->CA->SetText(1, ss.str().c_str());
     int* s = this->Renderer->GetSize();
     std::ostringstream ss1;
     ss1 << s[0] << " x " << s[1];
     this->CA->SetText(0, ss1.str().c_str());
-    this->Volumes->at(this->PrevCurrent)->SetVisibility(0);
-    this->Volumes->at(this->Current)->SetVisibility(1);
+    //    this->Volumes->at(this->PrevCurrent)->SetVisibility(0);
+    //    this->Volumes->at(this->Current)->SetVisibility(1);
+    double l = vtkTimerLog::GetUniversalTime();
     this->Interactor->GetRenderWindow()->Render();
+    ss << ":" << 1 / (vtkTimerLog::GetUniversalTime() - l);
+    this->CA->SetText(1, ss.str().c_str());
+    // std::cout << ss.str() << std::endl;
   }
 
   virtual void OnKeyPress() override
@@ -108,17 +114,22 @@ public:
     }
     else if (key == "space")
     {
-      this->PrevCurrent = this->Current;
-      this->Current = 0;
-      this->Update();
-      for (int i = 0; i < this->Volumes->size() - 1; ++i)
+      for (int i = 0; i < 36; ++i)
       {
-        this->PrevCurrent = this->Current;
-        this->Current++;
+        this->Renderer->GetActiveCamera()->Roll(10);
         this->Update();
       }
+      ///      this->PrevCurrent = this->Current;
+      ///      this->Current = 0;
+      ///      this->Update();
+      ///      for (int i = 0; i < this->Volumes->size() - 1; ++i)
+      ///      {
+      ///        this->PrevCurrent = this->Current;
+      ///        this->Current++;
+      ///        this->Update();
+      ///      }
     }
-    this->Update();
+    // this->Update();
     // Forward the event
     vtkInteractorStyleTrackballCamera::OnKeyPress();
   }
@@ -162,8 +173,11 @@ int main(int argc, char* argv[])
   vtkNew<vtkRenderer> ren;
   renWin->AddRenderer(ren.GetPointer());
 
-  vtkNew<vtkNrrdSequenceReader> reader;
-  reader->SetDirectoryName(argv[1]);
+  //  vtkNew<vtkNrrdSequenceReader> reader;
+  //  reader->SetDirectoryName(argv[1]);
+  //  reader->Update();
+  vtkNew<vtkRTAnalyticSource> reader;
+  reader->SetWholeExtent(-100, 100, -100, 100, -100, 100);
   reader->Update();
 
   vtkImageData* im = reader->GetOutput();
@@ -181,20 +195,20 @@ int main(int argc, char* argv[])
   // Prepare 1D Transfer Functions
   vtkNew<vtkColorTransferFunction> ctf;
   ctf->AddRGBPoint(0.0, 0.88, 0.34, 0.34);
-  ctf->AddRGBPoint(depthRange[1] / 7.0, 0.42, 0.0, 0.0);
-  ctf->AddRGBPoint(2 * depthRange[1] / 7.0, 1.0, 0.38, 0.0);
-  ctf->AddRGBPoint(3 * depthRange[1] / 7.0, 1.0, 1.0, 0.0);
-  ctf->AddRGBPoint(4 * depthRange[1] / 7.0, 0.0, 0.5, 0.0);
-  ctf->AddRGBPoint(5 * depthRange[1] / 7.0, 0.0, 1.0, 1.0);
-  ctf->AddRGBPoint(6 * depthRange[1] / 7.0, 0.0, 0.0, 0.34);
+  //  ctf->AddRGBPoint(depthRange[1] / 7.0, 0.42, 0.0, 0.0);
+  //  ctf->AddRGBPoint(2 * depthRange[1] / 7.0, 1.0, 0.38, 0.0);
+  //  ctf->AddRGBPoint(3 * depthRange[1] / 7.0, 1.0, 1.0, 0.0);
+  //  ctf->AddRGBPoint(4 * depthRange[1] / 7.0, 0.0, 0.5, 0.0);
+  //  ctf->AddRGBPoint(5 * depthRange[1] / 7.0, 0.0, 1.0, 1.0);
+  //  ctf->AddRGBPoint(6 * depthRange[1] / 7.0, 0.0, 0.0, 0.34);
   ctf->AddRGBPoint(depthRange[1], 0.27, 0.27, 0.85);
 
   vtkNew<vtkPiecewiseFunction> pf;
   pf->AddPoint(0, 0.00);
-  pf->AddPoint(25, 0.0);
-  pf->AddPoint(50, 0.1);
-  pf->AddPoint(75, 0.0);
-  pf->AddPoint(range[1], 0.0);
+  //  pf->AddPoint(25, 0.0);
+  //  pf->AddPoint(50, 0.1);
+  //  pf->AddPoint(75, 0.0);
+  pf->AddPoint(range[1], 0.01);
 
   volumeProperty->SetScalarOpacity(pf.GetPointer());
   volumeProperty->SetColor(ctf.GetPointer());
@@ -203,26 +217,26 @@ int main(int argc, char* argv[])
 
   // Cache all the volumes. Starting at 1, since the first one is already cached
   // by the previous Update call.
-  for (int i = 0; i < reader->GetNumberOfNrrdFiles(); ++i)
+  for (int i = 0; i < 1; ++i)
   {
-    if (i > 0)
-    {
-      reader->Next();
-      reader->Update();
-    }
-    std::cout << "Reading " << reader->GetCurrentFileName() << std::endl;
+    //    if (i > 0)
+    //    {
+    //      reader->Next();
+    //      reader->Update();
+    //    }
+    //    std::cout << "Reading " << reader->GetCurrentFileName() << std::endl;
     vtkNew<vtkOpenGLGPUVolumeRayCastMapper> mapper;
     vtkNew<vtkImageData> im1;
     im1->DeepCopy(reader->GetOutput());
     mapper->SetInputData(im1.GetPointer());
-    //mapper->SetInputConnection(reader->GetOutputPort());
-    mapper->SetUseJittering(1);
+    // mapper->SetInputConnection(reader->GetOutputPort());
+    // mapper->SetUseJittering(1);
     // Tell the mapper to use the min and max of the color function nodes as the
     // lookup table range instead of the volume scalar range.
-    mapper->SetColorRangeType(vtkGPUVolumeRayCastMapper::NATIVE);
+    // mapper->SetColorRangeType(vtkGPUVolumeRayCastMapper::NATIVE);
 
     // Modify the shader to color based on the depth of the translucent voxel
-    mapper->SetFragmentShaderCode(ColorCodedDepthFragmentShader);
+    // mapper->SetFragmentShaderCode(ColorCodedDepthFragmentShader);
 
     vtkNew<vtkVolume> volume;
     volume->SetMapper(mapper.GetPointer());
@@ -286,8 +300,8 @@ int main(int argc, char* argv[])
   //  volume->SetProperty(volumeProperty.GetPointer());
 
   vtkNew<vtkCornerAnnotation> ca;
-  //ca->SetText(2, reader->GetCurrentFileName().c_str());
-  ren->AddViewProp(ca.GetPointer());
+  // ca->SetText(2, reader->GetCurrentFileName().c_str());
+  // ren->AddViewProp(ca.GetPointer());
 
   vtkNew<vtkRenderWindowInteractor> iren;
   iren->SetRenderWindow(renWin.GetPointer());
