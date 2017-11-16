@@ -59,18 +59,8 @@ public:
 
   virtual void Update()
   {
-    // this->CA->SetText(2, this->Reader->GetCurrentFileName().c_str());
-    std::ostringstream sst;
-    sst << "TimeStep: " << this->Current;
-    this->CA->SetText(2, sst.str().c_str());
     double t = this->Renderer->GetLastRenderTimeInSeconds();
-    std::ostringstream ss;
-    ss << "FPS: " << 1 / t;
-    this->CA->SetText(1, ss.str().c_str());
-    int* s = this->Renderer->GetSize();
-    std::ostringstream ss1;
-    ss1 << s[0] << " x " << s[1];
-    this->CA->SetText(0, ss1.str().c_str());
+    std::cout << "FPS: " << 1 / t << std::endl;
     this->Volumes->at(this->PrevCurrent)->SetVisibility(0);
     this->Volumes->at(this->Current)->SetVisibility(1);
     this->Interactor->GetRenderWindow()->Render();
@@ -124,8 +114,6 @@ public:
   }
 
   vtkRenderer* Renderer;
-  // vtkNrrdSequenceReader* Reader;
-  vtkCornerAnnotation* CA;
   std::vector<vtkVolume*>* Volumes;
   int Current;
   int PrevCurrent;
@@ -237,69 +225,13 @@ int main(int argc, char* argv[])
     volumes.push_back(volume.GetPointer());
   }
 
-  //  vtkImageData* im = reader->GetOutput();
-  //  double* bounds = im->GetBounds();
-  //  double depthRange[2] = { 0.0, 0.0 };
-  //  depthRange[1] = bounds[5];
-  //
-  //  vtkNew<vtkVolumeProperty> volumeProperty;
-  //  volumeProperty->SetInterpolationType(VTK_LINEAR_INTERPOLATION);
-  //
-  //  vtkDataArray* arr = im->GetPointData()->GetScalars();
-  //  double range[2];
-  //  arr->GetRange(range);
-  //
-  //  // Prepare 1D Transfer Functions
-  //  vtkNew<vtkColorTransferFunction> ctf;
-  //  ctf->AddRGBPoint(0.0, 0.88, 0.34, 0.34);
-  //  ctf->AddRGBPoint(depthRange[1] / 7.0, 0.42, 0.0, 0.0);
-  //  ctf->AddRGBPoint(2 * depthRange[1] / 7.0, 1.0, 0.38, 0.0);
-  //  ctf->AddRGBPoint(3 * depthRange[1] / 7.0, 1.0, 1.0, 0.0);
-  //  ctf->AddRGBPoint(4 * depthRange[1] / 7.0, 0.0, 0.5, 0.0);
-  //  ctf->AddRGBPoint(5 * depthRange[1] / 7.0, 0.0, 1.0, 1.0);
-  //  ctf->AddRGBPoint(6 * depthRange[1] / 7.0, 0.0, 0.0, 0.34);
-  //  ctf->AddRGBPoint(depthRange[1], 0.27, 0.27, 0.85);
-  //
-  //  vtkNew<vtkPiecewiseFunction> pf;
-  //  pf->AddPoint(0, 0.00);
-  //  pf->AddPoint(25, 0.0);
-  //  pf->AddPoint(50, 0.1);
-  //  pf->AddPoint(75, 0.0);
-  //  pf->AddPoint(range[1], 0.0);
-  //
-  //  volumeProperty->SetScalarOpacity(pf.GetPointer());
-  //  volumeProperty->SetColor(ctf.GetPointer());
-
-  //  vtkNew<vtkOpenGLGPUVolumeRayCastMapper> mapper;
-  //  mapper->SetInputConnection(reader->GetOutputPort());
-  //  mapper->SetUseJittering(1);
-  //  // Tell the mapper to use the min and max of the color function nodes as
-  //  the
-  //  // lookup table range instead of the volume scalar range.
-  //  mapper->SetColorRangeType(vtkGPUVolumeRayCastMapper::NATIVE);
-  //
-  //  // Modify the shader to color based on the depth of the translucent voxel
-  //  mapper->SetFragmentShaderCode(ColorCodedDepthFragmentShader);
-
-  //  vtkNew<vtkVolume> volume;
-  //  volume->SetMapper(mapper.GetPointer());
-  //  volume->SetProperty(volumeProperty.GetPointer());
-
-  vtkNew<vtkCornerAnnotation> ca;
-  //ca->SetText(2, reader->GetCurrentFileName().c_str());
-  ren->AddViewProp(ca.GetPointer());
-
   vtkNew<vtkRenderWindowInteractor> iren;
   iren->SetRenderWindow(renWin.GetPointer());
 
   vtkNew<ChangeSequenceStyle> style;
   style->Renderer = ren.GetPointer();
-  // style->Reader = reader.GetPointer();
-  style->CA = ca.GetPointer();
   style->Volumes = &volumes;
   iren->SetInteractorStyle(style.GetPointer());
-  // iren->SetKeySym("n");
-  // iren->InvokeEvent(vtkCommand::KeyPressEvent, nullptr);
 
   ren->ResetCamera();
   renWin->Render();
