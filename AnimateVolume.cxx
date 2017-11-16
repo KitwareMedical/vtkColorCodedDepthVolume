@@ -145,7 +145,7 @@ int main(int argc, char* argv[])
 
   vtkNew<vtkRenderWindow> renWin;
   renWin->SetMultiSamples(0);
-  renWin->SetSize(801, 800); // Intentional NPOT size
+  renWin->SetSize(401, 400); // Intentional NPOT size
 
   vtkNew<vtkRenderer> ren;
   renWin->AddRenderer(ren.GetPointer());
@@ -159,33 +159,40 @@ int main(int argc, char* argv[])
   double depthRange[2] = { 0.0, 0.0 };
   depthRange[1] = bounds[5];
 
-  vtkNew<vtkVolumeProperty> volumeProperty;
-  volumeProperty->SetInterpolationType(VTK_LINEAR_INTERPOLATION);
-
   vtkDataArray* arr = im->GetPointData()->GetScalars();
   double range[2];
   arr->GetRange(range);
 
   // Prepare 1D Transfer Functions
   vtkNew<vtkColorTransferFunction> ctf;
-  ctf->AddRGBPoint(0.0, 0.88, 0.34, 0.34);
-  ctf->AddRGBPoint(depthRange[1] / 7.0, 0.42, 0.0, 0.0);
-  ctf->AddRGBPoint(2 * depthRange[1] / 7.0, 1.0, 0.38, 0.0);
-  ctf->AddRGBPoint(3 * depthRange[1] / 7.0, 1.0, 1.0, 0.0);
-  ctf->AddRGBPoint(4 * depthRange[1] / 7.0, 0.0, 0.5, 0.0);
-  ctf->AddRGBPoint(5 * depthRange[1] / 7.0, 0.0, 1.0, 1.0);
-  ctf->AddRGBPoint(6 * depthRange[1] / 7.0, 0.0, 0.0, 0.34);
-  ctf->AddRGBPoint(depthRange[1], 0.27, 0.27, 0.85);
+  ctf->AddRGBPoint(0.0, 0.0, 0.0, 0.0);
+  ctf->AddRGBPoint(80.0, 0.55, 0.45, 0.39);
+  ctf->AddRGBPoint(112.0, 0.51, 0.4, 0.36);
+  ctf->AddRGBPoint(176.0, 0.78, 0.54, 0.3);
+  ctf->AddRGBPoint(255.0, 0.9, 0.9, 0.9);
 
   vtkNew<vtkPiecewiseFunction> pf;
   pf->AddPoint(0, 0.00);
-  pf->AddPoint(25, 0.0);
-  pf->AddPoint(50, 0.1);
-  pf->AddPoint(75, 0.0);
-  pf->AddPoint(range[1], 0.0);
+  pf->AddPoint(80, 0.029);
+  pf->AddPoint(112, 0.5);
+  pf->AddPoint(176, 0.85);
+  pf->AddPoint(255, 1.0);
 
+  vtkNew<vtkPiecewiseFunction> gf;
+  gf->AddPoint(80, 0.0);
+  gf->AddPoint(112, 1.0);
+
+  vtkNew<vtkVolumeProperty> volumeProperty;
+  volumeProperty->SetInterpolationType(VTK_LINEAR_INTERPOLATION);
   volumeProperty->SetScalarOpacity(pf.GetPointer());
   volumeProperty->SetColor(ctf.GetPointer());
+//  volumeProperty->SetGradientOpacity(gf.GetPointer());
+//  volumeProperty->SetDisableGradientOpacity(0);
+  volumeProperty->ShadeOn();
+  volumeProperty->SetDiffuse(0, 1);
+  volumeProperty->SetAmbient(0, 0.3);
+  volumeProperty->SetSpecular(0, 0.5);
+  volumeProperty->SetSpecularPower(0, 100);
 
   std::vector<vtkVolume*> volumes;
 
@@ -207,10 +214,10 @@ int main(int argc, char* argv[])
     mapper->SetUseJittering(1);
     // Tell the mapper to use the min and max of the color function nodes as the
     // lookup table range instead of the volume scalar range.
-    mapper->SetColorRangeType(vtkGPUVolumeRayCastMapper::NATIVE);
+    //mapper->SetColorRangeType(vtkGPUVolumeRayCastMapper::NATIVE);
 
     // Modify the shader to color based on the depth of the translucent voxel
-    mapper->SetFragmentShaderCode(ColorCodedDepthFragmentShader);
+    //mapper->SetFragmentShaderCode(ColorCodedDepthFragmentShader);
 
     vtkNew<vtkVolume> volume;
     volume->SetMapper(mapper.GetPointer());
