@@ -188,7 +188,7 @@ int main(int argc, char* argv[])
   volumeProperty->SetColor(ctf.GetPointer());
 //  volumeProperty->SetGradientOpacity(gf.GetPointer());
 //  volumeProperty->SetDisableGradientOpacity(0);
-  volumeProperty->ShadeOn();
+  //volumeProperty->ShadeOn();
   volumeProperty->SetDiffuse(0, 1);
   volumeProperty->SetAmbient(0, 0.3);
   volumeProperty->SetSpecular(0, 0.5);
@@ -212,6 +212,8 @@ int main(int argc, char* argv[])
     mapper->SetInputData(im1.GetPointer());
     //mapper->SetInputConnection(reader->GetOutputPort());
     mapper->SetUseJittering(1);
+    mapper->SetBlendModeToAverageIntensity();
+    //mapper->SetAverageIPScalarRange(80, 255);
     // Tell the mapper to use the min and max of the color function nodes as the
     // lookup table range instead of the volume scalar range.
     //mapper->SetColorRangeType(vtkGPUVolumeRayCastMapper::NATIVE);
