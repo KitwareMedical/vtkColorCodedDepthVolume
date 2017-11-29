@@ -5,23 +5,18 @@ PROJECT(AnimateVolume)
 find_package(VTK REQUIRED)
 include(${VTK_USE_FILE})
 
+include(${VTK_CMAKE_DIR}/vtkEncodeString.cmake)
 set(shader_files
   ColorCodedDepthFragmentShader.glsl
 )
 unset(shader_c_files)
 foreach(file ${shader_files})
-  get_filename_component(file_we ${file} NAME_WE)
-  set(src  ${CMAKE_CURRENT_SOURCE_DIR}/${file})
-  set(res  ${CMAKE_CURRENT_BINARY_DIR}/${file_we}.cxx)
-  set(resh ${CMAKE_CURRENT_BINARY_DIR}/${file_we}.h)
-  list(APPEND shader_c_files ${res})
-  add_custom_command(
-    OUTPUT ${res} ${resh}
-    DEPENDS ${src} vtkEncodeString
-    COMMAND vtkEncodeString
-    ARGS ${res} ${src} ${file_we}
-      --build-header
+  vtk_encode_string(
+    INPUT           "${file}"
+    HEADER_OUTPUT   header
+    SOURCE_OUTPUT   source
     )
+  list(APPEND shader_c_files ${source})
 endforeach()
 
 include_directories(
