@@ -71,11 +71,12 @@ public:
     // Get the keypress
     vtkRenderWindowInteractor* rwi = this->Interactor;
     std::string key = rwi->GetKeySym();
+    unsigned int numVolumes = this->Volumes->size();
     // Handle the next volume key
     if (key == "n")
     {
       this->PrevCurrent = this->Current;
-      if (this->Current >= this->Volumes->size() - 1)
+      if (this->Current >= numVolumes - 1)
       {
         this->Current = 0;
       }
@@ -89,7 +90,7 @@ public:
       this->PrevCurrent = this->Current;
       if (this->Current <= 0)
       {
-        this->Current = this->Volumes->size() - 1;
+        this->Current = numVolumes - 1;
       }
       else
       {
@@ -101,11 +102,45 @@ public:
       this->PrevCurrent = this->Current;
       this->Current = 0;
       this->Update();
-      for (int i = 0; i < this->Volumes->size() - 1; ++i)
+      for (int i = 0; i < numVolumes - 1; ++i)
       {
         this->PrevCurrent = this->Current;
         this->Current++;
         this->Update();
+      }
+    }
+    else if (key == "a")
+    {
+      for (int i = 0; i < numVolumes; ++i)
+      {
+        vtkOpenGLGPUVolumeRayCastMapper* mapper =
+          vtkOpenGLGPUVolumeRayCastMapper::SafeDownCast(
+            this->Volumes->at(i)->GetMapper());
+        mapper->ClearAllShaderReplacements();
+        mapper->SetBlendModeToAverageIntensity();
+        mapper->SetAverageIPScalarRange(80, 255);
+      }
+    }
+    else if (key == "m")
+    {
+      for (int i = 0; i < numVolumes; ++i)
+      {
+        vtkOpenGLGPUVolumeRayCastMapper* mapper =
+          vtkOpenGLGPUVolumeRayCastMapper::SafeDownCast(
+            this->Volumes->at(i)->GetMapper());
+        mapper->ClearAllShaderReplacements();
+        mapper->SetBlendModeToMaximumIntensity();
+      }
+    }
+    else if (key == "c")
+    {
+      for (int i = 0; i < numVolumes; ++i)
+      {
+        vtkOpenGLGPUVolumeRayCastMapper* mapper =
+          vtkOpenGLGPUVolumeRayCastMapper::SafeDownCast(
+            this->Volumes->at(i)->GetMapper());
+        mapper->ClearAllShaderReplacements();
+        mapper->SetBlendModeToComposite();
       }
     }
     this->Update();
@@ -186,16 +221,15 @@ int main(int argc, char* argv[])
   volumeProperty->SetInterpolationType(VTK_LINEAR_INTERPOLATION);
   volumeProperty->SetScalarOpacity(pf.GetPointer());
   volumeProperty->SetColor(ctf.GetPointer());
-//  volumeProperty->SetGradientOpacity(gf.GetPointer());
-//  volumeProperty->SetDisableGradientOpacity(0);
-  //volumeProperty->ShadeOn();
+  //  volumeProperty->SetGradientOpacity(gf.GetPointer());
+  //  volumeProperty->SetDisableGradientOpacity(0);
+  volumeProperty->ShadeOn();
   volumeProperty->SetDiffuse(0, 1);
   volumeProperty->SetAmbient(0, 0.3);
   volumeProperty->SetSpecular(0, 0.5);
   volumeProperty->SetSpecularPower(0, 100);
 
   std::vector<vtkVolume*> volumes;
-
   // Cache all the volumes. Starting at 1, since the first one is already cached
   // by the previous Update call.
   for (int i = 0; i < reader->GetNumberOfNrrdFiles(); ++i)
@@ -210,16 +244,13 @@ int main(int argc, char* argv[])
     vtkNew<vtkImageData> im1;
     im1->DeepCopy(reader->GetOutput());
     mapper->SetInputData(im1.GetPointer());
-    //mapper->SetInputConnection(reader->GetOutputPort());
     mapper->SetUseJittering(1);
-    mapper->SetBlendModeToAverageIntensity();
-    //mapper->SetAverageIPScalarRange(80, 255);
     // Tell the mapper to use the min and max of the color function nodes as the
     // lookup table range instead of the volume scalar range.
-    //mapper->SetColorRangeType(vtkGPUVolumeRayCastMapper::NATIVE);
+    // mapper->SetColorRangeType(vtkGPUVolumeRayCastMapper::NATIVE);
 
     // Modify the shader to color based on the depth of the translucent voxel
-    //mapper->SetFragmentShaderCode(ColorCodedDepthFragmentShader);
+    // mapper->SetFragmentShaderCode(ColorCodedDepthFragmentShader);
 
     vtkNew<vtkVolume> volume;
     volume->SetMapper(mapper.GetPointer());
