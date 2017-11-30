@@ -140,7 +140,65 @@ public:
           vtkOpenGLGPUVolumeRayCastMapper::SafeDownCast(
             this->Volumes->at(i)->GetMapper());
         mapper->ClearAllShaderReplacements();
+        mapper->SetColorRangeType(vtkGPUVolumeRayCastMapper::SCALAR);
         mapper->SetBlendModeToComposite();
+      }
+    }
+    else if (key == "d")
+    {
+      for (int i = 0; i < numVolumes; ++i)
+      {
+        vtkOpenGLGPUVolumeRayCastMapper* mapper =
+          vtkOpenGLGPUVolumeRayCastMapper::SafeDownCast(
+            this->Volumes->at(i)->GetMapper());
+        mapper->ClearAllShaderReplacements();
+        mapper->SetColorRangeType(vtkGPUVolumeRayCastMapper::NATIVE);
+        mapper->SetFragmentShaderCode(ColorCodedDepthFragmentShader);
+      }
+    }
+    else if (key == "o")
+    {
+      for (int i = 0; i < numVolumes; ++i)
+      {
+        vtkOpenGLGPUVolumeRayCastMapper* mapper =
+          vtkOpenGLGPUVolumeRayCastMapper::SafeDownCast(
+            this->Volumes->at(i)->GetMapper());
+        mapper->ClearAllShaderReplacements();
+        mapper->SetBlendModeToComposite();
+        mapper->SetColorRangeType(vtkGPUVolumeRayCastMapper::SCALAR);
+        mapper->AddShaderReplacement(
+          vtkShader::Fragment,
+          "//VTK::Shading::Impl",
+          true,
+          "if (!g_skip)\n"
+          "  {\n"
+          "  vec4 scalar = texture3D(in_volume, g_dataPos);\n"
+          "  scalar.r = scalar.r*in_volume_scale.r + in_volume_bias.r;\n"
+          "  scalar = vec4(scalar.r,scalar.r,scalar.r,scalar.r);\n"
+          "  g_srcColor = vec4(0.0);\n"
+          "  g_srcColor.a = computeOpacity(scalar);\n"
+          "  if (g_srcColor.a > 0.0)\n"
+          "    {\n"
+          "    g_srcColor = computeColor(scalar, g_srcColor.a);\n"
+          "    // Opacity calculation using compositing:\n"
+          "    // Here we use front to back compositing scheme whereby\n"
+          "    // the current sample value is multiplied to the\n"
+          "    // currently accumulated alpha and then this product\n"
+          "    // is subtracted from the sample value to get the\n"
+          "    // alpha from the previous steps. Next, this alpha is\n"
+          "    // multiplied with the current sample colour\n"
+          "    // and accumulated to the composited colour. The alpha\n"
+          "    // value from the previous steps is then accumulated\n"
+          "    // to the composited colour alpha.\n"
+          "    vec3 l_dataPos = g_dataPos;\n"
+          "    g_srcColor.gb *= l_dataPos.z;\n"
+          "    g_srcColor.rgb *= g_srcColor.a;\n"
+          "    g_fragColor = (1.0f - g_fragColor.a) * g_srcColor + g_fragColor;\n"
+          "    }\n"
+          "  }"
+          "",
+          true
+        );
       }
     }
     this->Update();
@@ -245,13 +303,6 @@ int main(int argc, char* argv[])
     im1->DeepCopy(reader->GetOutput());
     mapper->SetInputData(im1.GetPointer());
     mapper->SetUseJittering(1);
-    // Tell the mapper to use the min and max of the color function nodes as the
-    // lookup table range instead of the volume scalar range.
-    // mapper->SetColorRangeType(vtkGPUVolumeRayCastMapper::NATIVE);
-
-    // Modify the shader to color based on the depth of the translucent voxel
-    // mapper->SetFragmentShaderCode(ColorCodedDepthFragmentShader);
-
     vtkNew<vtkVolume> volume;
     volume->SetMapper(mapper.GetPointer());
     volume->SetProperty(volumeProperty.GetPointer());
