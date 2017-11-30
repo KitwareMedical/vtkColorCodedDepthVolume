@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    AnimateVolume.cxx
+  Module:    AnimateVTKVolume.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -41,7 +41,7 @@
 #include <sys/types.h>
 #include <vector>
 
-// AnimateVolume includes
+// AnimateVTKVolume includes
 #include "vtkNrrdSequenceReader.h"
 #include <ColorCodedDepthFragmentShader.h>
 
