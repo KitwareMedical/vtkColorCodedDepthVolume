@@ -191,7 +191,8 @@ public:
           "    // value from the previous steps is then accumulated\n"
           "    // to the composited colour alpha.\n"
           "    vec3 l_dataPos = g_dataPos;\n"
-          "    g_srcColor.gb *= l_dataPos.z;\n"
+          "    g_srcColor.rg *= (1 - l_dataPos.x)*0.8;\n"
+          "    g_srcColor.b *= 0.7;\n"
           "    g_srcColor.rgb *= g_srcColor.a;\n"
           "    g_fragColor = (1.0f - g_fragColor.a) * g_srcColor + g_fragColor;\n"
           "    }\n"
@@ -283,9 +284,9 @@ int main(int argc, char* argv[])
   //  volumeProperty->SetDisableGradientOpacity(0);
   volumeProperty->ShadeOn();
   volumeProperty->SetDiffuse(0, 1);
-  volumeProperty->SetAmbient(0, 0.3);
-  volumeProperty->SetSpecular(0, 0.5);
-  volumeProperty->SetSpecularPower(0, 100);
+  volumeProperty->SetAmbient(0, 0.6);
+  volumeProperty->SetSpecular(0, 0.8);
+  volumeProperty->SetSpecularPower(0, 50);
 
   std::vector<vtkVolume*> volumes;
   // Cache all the volumes. Starting at 1, since the first one is already cached
