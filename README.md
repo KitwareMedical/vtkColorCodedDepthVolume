@@ -95,7 +95,7 @@ composite representing depth of individual voxels in a yellow - brown - blue
 color transfer function.
 
 The application uses
-[`vtkOpenGLGPUVolumeRayCastMapper::SetFragmentShaderCode()`] to replace the
+[`vtkOpenGLGPUVolumeRayCastMapper::SetFragmentShaderCode()`](https://www.vtk.org/doc/nightly/html/classvtkOpenGLGPUVolumeRayCastMapper.html#a95123c088bb25fbc8231702bedf57aea) to replace the
 whole shader code with the code provided by
 [ColorCodedDepthFragmentShader.glsl](./ColorCodedDepthFragmentShader.glsl).
 This code terminates the ray at the first non-transparent voxel and registers
