@@ -59,7 +59,7 @@ For converting a single `*.seq.nrrd` (4D NRRD volume) into individual 3D NRRD
 volumes, one can use [teem-unu](http://teem.sourceforge.net/unrrdu/).
 
 ```shell_session
-$ unu dice -a 0 -i <input 4D file> -o <output basename> -ff %03.nrrd
+$ unu dice -a 0 -i <input 4D file> -o <output basename> -ff %03d.nrrd
 ```
 
 ## Description
